@@ -18,6 +18,8 @@ int main(int argc, char * argv[])
 	/*Queues */
 	Node* checkList = NULL;
 	Node* toCheckTail = NULL;
+	Node* pathList = NULL;
+	Node* pathListTail = NULL;
 	
 	/* Mouse variables*/
 	int mx, my;
@@ -27,13 +29,19 @@ int main(int argc, char * argv[])
 	
 	TileMap *map; //map
 	static Vector2D path[2]; //path to take
+	
 	char arr[642]; //map array
 	int visited[642]; //visited array
+	int camefrom[642];
 	intVec2 current = { 2, 7 };
 	int currentIndex = 0;
-	int temp = 0;
+	Vector2D newVec = { 0, 0 };
+	int next = 0;
 	int goalIndex = 0;
+	int startIndex = 0;
 	Node* this_node;
+	int pathlength;
+	Vector2D * finalpath;
 
 	/*program initializtion*/
 	init_logger("gf2d.log");
@@ -61,19 +69,21 @@ int main(int argc, char * argv[])
 	for (int i = 0; i <= 640; i++)
 	{
 		arr[i] = map->map[i];
-		//printf("\nArr %c", arr[i]);
 	}
 	arr[641] = '\0';
 	//popular array for visited with zeros
 	for (int i = 0; i <= 640; i++)
 	{
+		camefrom[i] = 0;
 		visited[i] = 0;
 	}
 	
 	//pathfinding algo
-	temp = MatrixToIndex(2, 7);
-	checkList = push(checkList, &toCheckTail, temp, 0);
+	next = MatrixToIndex(2, 7);
+	checkList = push(checkList, &toCheckTail, next, 0);
+
 	goalIndex = MatrixToIndex(7, 16);
+	camefrom[71] = 999;
 
 	//while(count(toCheckHead) > 0)
 	while(checkList != NULL)
@@ -86,67 +96,86 @@ int main(int argc, char * argv[])
 			printf("found goal");
 		}
 
-		temp = TileAbove(currentIndex);
-		if(arr[temp] == '0')
+		next = TileAbove(currentIndex);
+		if(arr[next] == '0')
 		{
-			if (visited[temp] == 0)
+			if (visited[next] == 0)
 			{
-				checkList = push(checkList, &toCheckTail, temp, 0);
-				visited[temp] = 1;
+				checkList = push(checkList, &toCheckTail, next, 0);
+				visited[next] = 1;
+				camefrom[next] = currentIndex;
 			}
 		}
 
-		temp = TileRight(currentIndex);
-		if (arr[temp] == '0')
+		next = TileRight(currentIndex);
+		if (arr[next] == '0')
 		{
-			if (visited[temp] == 0)
+			if (visited[next] == 0)
 			{
-				checkList = push(checkList, &toCheckTail, temp, 0);
-				visited[temp] = 1;
+				checkList = push(checkList, &toCheckTail, next, 0);
+				visited[next] = 1;
+				camefrom[next] = currentIndex;
 			}
 		}
 
-		temp = TileDown(currentIndex);
-		if (arr[temp] == '0')
+		next = TileDown(currentIndex);
+		if (arr[next] == '0')
 		{
-			if (visited[temp] == 0)
+			if (visited[next] == 0)
 			{
-				checkList = push(checkList, &toCheckTail, temp, 0);
-				visited[temp] = 1;
+				checkList = push(checkList, &toCheckTail, next, 0);
+				visited[next] = 1;
+				camefrom[next] = currentIndex;
 			}
 		}
 
-		temp = TileLeft(currentIndex);
-		if (arr[temp] == '0')
+		next = TileLeft(currentIndex);
+		if (arr[next] == '0')
 		{
-			if (visited[temp] == 0)
+			if (visited[next] == 0)
 			{
-				checkList = push(checkList, &toCheckTail, temp, 0);
-				visited[temp] = 1;
+				checkList = push(checkList, &toCheckTail, next, 0);
+				visited[next] = 1;
+				camefrom[next] = currentIndex;
 			}
 		}
 
 	}
 
+	//construct a path
+	currentIndex = goalIndex;
+	pathList = push(pathList, &pathListTail, currentIndex, 0);
 
-	//visited = {}
-	//	visited[start] = True
+	while(currentIndex != 999)
+	{
+		currentIndex = camefrom[currentIndex];
+		
+		printf("\ncurrent %i camefrom %i", currentIndex, camefrom[currentIndex]);
+		pathList = push(pathList, &pathListTail, currentIndex, 0);
+		if (currentIndex == 71)
+		{
+			printf("\nat start");
+			break;
+		}
+	}
 
-	//	while not frontier.empty() :
-	//		current = frontier.get()
-	//		for next in graph.neighbors(current) :
-	//			if next not in visited :
-	//frontier.put(next)
-	//	visited[next] = True
+	pathlength = count(pathList);
+	printf("\nlen %i", pathlength);
+	//pathlength++;
+	
+	//Vector2D finalpath[pathlength];
+	finalpath = (Vector2D*)malloc(sizeof(Vector2D) * pathlength);
+	memset(finalpath, 0, sizeof(Vector2D) * pathlength);
 
-	//slog("Current position: row %i , column %i", current.row, current.column);
-	//temp = MatrixToIndex(current.row, current.column);
-	//slog("Temp: %i", temp);
-	//temp = RowFromIndex(71);
-	//slog("Current row: %i", temp);
-	//temp = ColumnFromIndex(71);
-	//slog("Current column: %i", temp);
-
+	for (int j = 0; j < pathlength; j++)
+	{
+		this_node = deq(&pathList);
+		int row = RowFromIndex(this_node->data);
+		int column = ColumnFromIndex(this_node->data);
+		newVec.y = row;
+		newVec.x = column;
+		finalpath[j] = newVec;
+	}
 
     /*main game loop*/
     while(!done)
@@ -165,7 +194,8 @@ int main(int argc, char * argv[])
             gf2d_sprite_draw_image(sprite,vector2d(0,0));
                         
             tilemap_draw(map,vector2d(86,24));
-            tilemap_draw_path(path, 2, map, vector2d(86,24));
+            //tilemap_draw_path(path, 2, map, vector2d(86,24));
+			tilemap_draw_path(finalpath, pathlength, map, vector2d(86, 24));
 
             //UI elements last
             gf2d_sprite_draw(
