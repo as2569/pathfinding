@@ -1,0 +1,3 @@
+rw + c --> matrix to array
+r = i / w --> row in array to matrix 
+c = r % w --> column in array to matrix
